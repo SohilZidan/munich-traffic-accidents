@@ -22,5 +22,11 @@ First data is preprocessed as follows:
 6. data train-test split
 7. train a shallow neural network with 3 hidden layers and one output layer. As the output is normalized, the output activation function is sigmoid. You can see the learning curve in *fig.3*:
 ![learning-curve](https://storage.googleapis.com/dps-opendataportal-354609-bucket/train.png)
+## Deployment
+for training I use GCP Vertex AI following the steps in [here](https://github.com/SohilZidan/dps-vertex-ai)\
+deploy the mode using the command:
+```bash
+python3 deploy.py | tee deploy-output.txt
+```
 
 
