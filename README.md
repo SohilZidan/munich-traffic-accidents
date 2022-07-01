@@ -29,4 +29,7 @@ deploy the mode using the command:
 python3 deploy.py | tee deploy-output.txt
 ```
 
+## Prediction API
+the current version requires input features normalization and output prediction denormalization (read [predict.py](predict.py))
+
 
