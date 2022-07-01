@@ -30,6 +30,33 @@ python3 deploy.py | tee deploy-output.txt
 ```
 
 ## Prediction API
-the current version requires input features normalization and output prediction denormalization (read [predict.py](predict.py))
+<!-- the current version requires input features normalization and output prediction denormalization (read [predict.py](predict.py)) -->
+Input is fed to the endpoint with the following format:
 
-
+* store input in a file `INPUT-JSON`:
+    ```json
+    {
+        "instances": [
+            [2020,1,1,0,0,0,1,0]
+        ]
+    }
+    ```
+* fill `ENDPOINT_ID` and `PROJECT_ID`:
+    ```bash
+    ENDPOINT_ID=""
+    PROJECT_ID=""
+    INPUT_DATA_FILE="INPUT-JSON"
+    ```
+* make a Request:
+    ```bash
+    curl \
+    -X POST \
+    -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+    -H "Content-Type: application/json" \
+    https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/us-central1/endpoints/${ENDPOINT_ID}:predict \
+    -d "@${INPUT_DATA_FILE}"
+    ``
+**!NOTE!** you may have to authenticate your google account using:
+```
+gcloud auth application-default login
+```
