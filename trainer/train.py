@@ -15,8 +15,6 @@ from tensorflow.keras import layers
 from google.cloud import storage
 import io
 
-# from misc import Normalization
-
 class Normalization:
 
   fields_to_normalize = ["JAHR", "MONAT"]
@@ -44,11 +42,28 @@ class Normalization:
     return x * (self.target_stats['max']["WERT"] - self.target_stats['min']["WERT"]) + self.target_stats['min']["WERT"]
 
 
-def predict(x, y_true):
-    normalized_sample = norm.normalize_features(x).tolist()
-    y_pred = norm.denormalize_target(model.predict([normalized_sample]))
-    print("GT:", y_true, "\nPredicted:", y_pred)
-    print("AE:",abs(y_true-y_pred))
+# Learning curve
+def plot_loss(history):
+    fig = plt.figure()
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history['val_loss'], label='val_loss')
+    # plt.ylim([0, 10])
+    plt.xlabel('Epoch')
+    plt.ylabel('Error')
+    plt.legend()
+    plt.grid(True)
+
+    fig_to_upload = plt.gcf()
+    # Save figure image to a bytes buffer
+    buf = io.BytesIO()
+    fig_to_upload.savefig(buf, format='png')
+    # init GCS client and upload buffer contents
+    client = storage.Client()
+    # BUCKET+'/train.png'
+    bucket = client.get_bucket('dps-opendataportal-354609-bucket')
+    blob = bucket.blob('train.png')  
+    blob.upload_from_file(buf, content_type='image/png', rewind=True)
+
 
 if __name__ == "__main__":
     print(tf.__version__)
@@ -86,15 +101,25 @@ if __name__ == "__main__":
     train_dataset.pop('WERT')
     test_dataset.pop('WERT')
 
-    normed_train_data = norm.normalize_features(train_dataset)
-    normed_test_data = norm.normalize_features(test_dataset)
+    # Scales and Offsets of Rescale layer
+    # input
+    target_stats = train_stats.pop("WERT")
+    train_stats = train_stats.transpose()
+    scale = 1.0/(train_stats["max"] - train_stats["min"]).to_numpy()
+    offset = (train_stats["min"]/(train_stats["max"] - train_stats["min"])).to_numpy()
+    # output
+    target_stats = target_stats.transpose()
+    target_scale = (target_stats["max"] - target_stats["min"])
+    target_offset = target_stats["min"]
 
     ############
     # Training #
     ############
     def build_model():
         model = keras.Sequential([
-        layers.Dense(32, activation='relu', input_shape=[len(normed_train_data.keys())]),
+        layers.InputLayer(input_shape=[len(train_dataset.keys())]),
+        tf.keras.layers.Rescaling (scale, -offset),
+        layers.Dense(32, activation='relu'),
         layers.Dense(64, activation='relu'),
         layers.Dense(32,),
         layers.Dense(1, activation="sigmoid")
@@ -114,45 +139,25 @@ if __name__ == "__main__":
     EPOCHS = 100
     early_stop = keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
-    early_history = model.fit(normed_train_data, train_labels, batch_size=32, 
-                        epochs=EPOCHS, validation_split = 0.2,
+    early_history = model.fit(train_dataset, train_labels, batch_size=32, 
+                        epochs=EPOCHS, validation_split = 0.2, verbose=0,
                         callbacks=[early_stop])
-
-
-    # predict
-    sample = [2021, 1, 1,0,0, 0, 1, 0]
-    x = pd.Series(dict(zip(train_dataset.keys(), sample)))
-    y_true = 16
-    predict(x, y_true)
-
-    sample = [2020, 1, 1,0,0, 0, 1, 0]
-    x = pd.Series(dict(zip(train_dataset.keys(), sample)))
-    y_true = 28
-    predict(x, y_true)
-
-    # Learning curve
-    def plot_loss(history):
-        fig = plt.figure()
-        plt.plot(history.history['loss'], label='loss')
-        plt.plot(history.history['val_loss'], label='val_loss')
-        # plt.ylim([0, 10])
-        plt.xlabel('Epoch')
-        plt.ylabel('Error')
-        plt.legend()
-        plt.grid(True)
-
-        fig_to_upload = plt.gcf()
-        # Save figure image to a bytes buffer
-        buf = io.BytesIO()
-        fig_to_upload.savefig(buf, format='png')
-        # init GCS client and upload buffer contents
-        client = storage.Client()
-        # BUCKET+'/train.png'
-        bucket = client.get_bucket('dps-opendataportal-354609-bucket')
-        blob = bucket.blob('train.png')  
-        blob.upload_from_file(buf, content_type='image/png', rewind=True)
 
     plot_loss(early_history)
 
+    end2end_model = keras.Sequential(
+        [
+        layers.InputLayer(input_shape=[len(train_dataset.keys())]),
+        model,
+        tf.keras.layers.Rescaling(target_scale, target_offset)
+        ])
+
+    samples = [
+        [2021, 1, 1,0,0, 0, 1, 0],
+        [2020, 1, 1,0,0, 0, 1, 0]
+    ]
+    y_true = [16, 28]
+    print(end2end_model.predict(samples))
+
     # # Export model and save to GCS
-    model.save(BUCKET + '/opendataportal/model')
+    end2end_model.save(BUCKET + '/opendataportal/end2endmodel')
