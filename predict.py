@@ -1,12 +1,12 @@
 from google.cloud import aiplatform
 from transform_input import transform
 endpoint = aiplatform.Endpoint(
-    endpoint_name="projects/284595570276/locations/us-central1/endpoints/5051728164049387520"
+    endpoint_name="projects/166843564221/locations/us-central1/endpoints/7181396425144532992"
 )
 
 sample_raw = ['Alkoholunfälle',
 'insgesamt',
-'2020',
+'2021',
 '01']
 
 # sample = {
