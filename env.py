@@ -1,0 +1,1 @@
+BUCKET = "gs://dps-challenge-354007-bucket"

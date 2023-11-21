@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 def transform(sample_raw):
     sample = [
         int(sample_raw[2]),

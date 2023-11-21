@@ -1,6 +1,5 @@
 from google.cloud import aiplatform
-
-BUCKET = "gs://dps-challenge-354007-bucket"
+from env import BUCKET
 
 # Create a model resource from public model assets
 model = aiplatform.Model.upload(
