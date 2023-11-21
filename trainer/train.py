@@ -79,7 +79,7 @@ if __name__ == "__main__":
     dataset = dataset.dropna()
     dataset = dataset[["MONATSZAHL", "AUSPRAEGUNG", "JAHR", "MONAT", "WERT"]]
     # drop 2021 entries
-    dataset = dataset.drop(dataset[dataset.JAHR == 2021].index)
+    dataset = dataset.drop(dataset[dataset.JAHR > 2020].index)
 
     dataset["MONAT"] = dataset["MONAT"].map(lambda x: x[-2:])
     dataset["MONAT"] = dataset["MONAT"].astype(np.int64)
